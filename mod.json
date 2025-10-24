@@ -1,0 +1,31 @@
+{
+	"geode": "4.9.0",
+	"gd": {
+		"win": "2.2074",
+		"android": "2.2074",
+		"mac": "2.2074",
+		"ios": "2.2074"
+	},
+	"id": "gwddos.gmd3",
+	"name": "GMD3",
+	"version": "v1.0.0",
+	"developer": "HJfod, GWDdoS",
+	"description": "GMD but better. All Credits go to HJfod for the original GMD mod.",
+	"resources": {
+		"spritesheets": {
+			"GDShare": [
+				"resources/*.png"
+			]
+		}
+	},
+	"links": {
+		"source": "https://discord.gg/CGxaTGJaGV",
+		"community": "https://discord.gg/CGxaTGJaGV"
+	},
+	"dependencies": {
+        "geode.node-ids": {
+            "version": ">=v1.21.1",
+            "importance": "required"
+        }
+	}
+}
