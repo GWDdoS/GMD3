@@ -11,25 +11,14 @@ namespace gmd {
     class ExportGmdFile;
 
     enum class GmdFileType {
-        Lvl,
-        Gmd,
-        Gmd2,
         Gmd3,
     };
 
-    enum class GmdListFileType {
-        Gmdl,
-    };
-
-    constexpr auto DEFAULT_GMD_TYPE = GmdFileType::Gmd;
-    constexpr auto DEFAULT_GMD_LIST_TYPE = GmdListFileType::Gmdl;
-    constexpr auto GMD2_VERSION = 1;
+    constexpr auto DEFAULT_GMD_TYPE = GmdFileType::Gmd3;
+    constexpr auto GMD3_VERSION = 1;
 
     constexpr const char* gmdTypeToString(GmdFileType type) {
         switch (type) {
-            case GmdFileType::Lvl:  return "lvl";
-            case GmdFileType::Gmd:  return "gmd";
-            case GmdFileType::Gmd2: return "gmd2";
             case GmdFileType::Gmd3: return "gmd3";
             default:                return nullptr;
         }
@@ -38,25 +27,7 @@ namespace gmd {
     constexpr std::optional<GmdFileType> gmdTypeFromString(const char* type) {
         using geode::utils::hash;
         switch (hash(type)) {
-            case hash("lvl"):  return GmdFileType::Lvl;
-            case hash("gmd"):  return GmdFileType::Gmd;
-            case hash("gmd2"): return GmdFileType::Gmd2;
             case hash("gmd3"): return GmdFileType::Gmd3;
-            default:           return std::nullopt;
-        }
-    }
-
-    constexpr const char* gmdListTypeToString(GmdListFileType type) {
-        switch (type) {
-            case GmdListFileType::Gmdl: return "gmdl";
-            default:                    return nullptr;
-        }
-    }
-
-    constexpr std::optional<GmdListFileType> gmdListTypeFromString(const char* type) {
-        using geode::utils::hash;
-        switch (hash(type)) {
-            case hash("gmdl"): return GmdListFileType::Gmdl;
             default:           return std::nullopt;
         }
     }
@@ -64,7 +35,6 @@ namespace gmd {
     enum class GmdFileKind {
         None,
         Level,
-        List,
     };
 
     GmdFileKind getGmdFileKind(std::filesystem::path const& path);
@@ -128,49 +98,6 @@ namespace gmd {
     );
 
     geode::Result<GJGameLevel*> importGmdAsLevel(
-        std::filesystem::path const& from
-    );
-
-    class ImportGmdList final {
-    private:
-        class Impl;
-        std::unique_ptr<Impl> m_impl;
-
-        ImportGmdList(std::filesystem::path const& path);
-
-    public:
-        static ImportGmdList from(std::filesystem::path const& path);
-        ~ImportGmdList();
-
-        ImportGmdList& setType(GmdListFileType type);
-
-        geode::Result<geode::Ref<GJLevelList>> intoList();
-    };
-
-    class ExportGmdList final {
-    private:
-        class Impl;
-        std::unique_ptr<Impl> m_impl;
-
-        ExportGmdList(GJLevelList* list);
-
-    public:
-        static ExportGmdList from(GJLevelList* list);
-        ~ExportGmdList();
-
-        ExportGmdList& setType(GmdListFileType type);
-
-        geode::Result<geode::ByteVector> intoBytes() const;
-        geode::Result<> intoFile(std::filesystem::path const& path) const;
-    };
-
-    geode::Result<> exportListAsGmd(
-        GJLevelList* list,
-        std::filesystem::path const& to,
-        GmdListFileType type = DEFAULT_GMD_LIST_TYPE
-    );
-
-    geode::Result<geode::Ref<GJLevelList>> importGmdAsList(
         std::filesystem::path const& from
     );
 }

@@ -1,5 +1,5 @@
-#include "Shared.hpp"
-
+#include "shared.hpp"
+/* no yet implemented for export as GMD3
 static void removeNullbytesFromString(std::string& str) {
     for (auto& c : str) {
         if (!c) c = ' ';
@@ -27,3 +27,4 @@ auto ::handlePlistDataForParsing(std::string& value) -> bool {
     }
     return isOldFile;
 }
+*/

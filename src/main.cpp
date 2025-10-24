@@ -2,8 +2,8 @@
 #include <Geode/utils/cocos.hpp>
 #include <Geode/modify/LevelBrowserLayer.hpp>
 #include <Geode/ui/Popup.hpp>
-#include "Shared.hpp"
-#include "GMD.hpp"
+#include "shared.hpp"
+#include "gmd3.hpp"
 
 using namespace geode::prelude;
 using namespace gmd;

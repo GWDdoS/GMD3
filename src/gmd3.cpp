@@ -1,10 +1,9 @@
-#include "Shared.hpp"
-#include "GMD.hpp"
+#include "shared.hpp"
+#include "gmd3.hpp"
 #include <Geode/utils/file.hpp>
 #include <Geode/binding/MusicDownloadManager.hpp>
 #include <Geode/utils/JsonValidation.hpp>
 #include <Geode/cocos/support/base64.h>
-
 using namespace geode::prelude;
 using namespace gmd;
 
@@ -61,99 +60,10 @@ geode::Result<std::string> ImportGmdFile::getLevelData() const {
     if (!m_type) {
         return Err("No file type set");
     }
-    switch (m_type.value()) {
-        case GmdFileType::Gmd: {
-            return file::readString(m_path).mapErr([this](std::string err) { return fmt::format("Unable to read {}: {}", m_path, err); });
-        } break;
     
-        case GmdFileType::Lvl: {
-            GEODE_UNWRAP_INTO(auto data, file::readBinary(m_path));
-            unsigned char* unzippedData;
-            auto count = ZipUtils::ccInflateMemory(
-                data.data(),
-                data.size(),
-                &unzippedData
-            );
-            if (!count) {
-                return Err("Unable to decompress level data");
-            }
-            auto str = std::string(
-                reinterpret_cast<const char*>(unzippedData),
-                count
-            );
-            free(unzippedData);
-            return Ok(str);
-        } break;
-
-        case GmdFileType::Gmd2: {
-            try {
-                GEODE_UNWRAP_INTO(
-                    auto unzip, file::Unzip::create(m_path)
-                        .mapErr([](std::string err) { return fmt::format("Unable to read file: {}", err); })
-                );
-
-                GEODE_UNWRAP_INTO(
-                    auto jsonData, unzip.extract("level.meta")
-                        .mapErr([](std::string err) { return fmt::format("Unable to read metadata: {}", err); })
-                );
-
-                GEODE_UNWRAP_INTO(
-                    auto json, matjson::parse(std::string(jsonData.begin(), jsonData.end()))
-                        .mapErr([](std::string err) { return fmt::format("Unable to parse metadata: {}", err); })
-                );
-
-                JsonExpectedValue root(json, "[level.meta]");
-                
-                std::string songFile;
-                root.has("song-file").into(songFile);
-                if (m_importSong && songFile.size()) {
-                    if (!verifySongFileName(songFile)) {
-                        return Err("Song file name is invalid!");
-                    }
-
-                    GEODE_UNWRAP_INTO(
-                        auto songData, unzip.extract(songFile)
-                            .mapErr([](std::string err) { return fmt::format("Unable to read song file: {}", err); })
-                    );
-
-                    std::filesystem::path songTargetPath;
-                    if (root.has("song-is-custom").get<bool>()) {
-                        songTargetPath = std::string(MusicDownloadManager::sharedState()->pathForSong(
-                            std::stoi(songFile.substr(0, songFile.find_first_of(".")))
-                        ));
-                    } else {
-                        songTargetPath = "Resources/" + songFile;
-                    }
-
-                    std::filesystem::path oldSongPath = songTargetPath;
-                    while (std::filesystem::exists(oldSongPath)) {
-                        oldSongPath.replace_filename(oldSongPath.stem().string() + "_.mp3");
-                    }
-                    if (std::filesystem::exists(oldSongPath)) {
-                        std::filesystem::rename(songTargetPath, oldSongPath);
-                    }
-                    (void)file::writeBinary(songTargetPath, songData);
-                }
-
-                GEODE_UNWRAP_INTO(
-                    auto levelData, unzip.extract("level.data")
-                        .mapErr([](std::string err) { return fmt::format("Unable to read level data: {}", err); })
-                );
-
-                return Ok(std::string(levelData.begin(), levelData.end()));
-            } catch(std::exception& e) {
-                return Err("Unable to read zip: " + std::string(e.what()));
-            }
-        } break;
-
-        case GmdFileType::Gmd3: {
-            return file::readString(m_path).mapErr([this](std::string err) { return fmt::format("Unable to read {}: {}", m_path, err); });
-        } break;
-
-        default: {
-            return Err("Unknown file type");
-        } break;
-    }
+    return file::readString(m_path).mapErr([this](std::string err) { 
+        return fmt::format("Unable to read {}: {}", m_path, err); 
+    });
 }
 
 geode::Result<GJGameLevel*> ImportGmdFile::intoLevel() const {
@@ -161,7 +71,6 @@ geode::Result<GJGameLevel*> ImportGmdFile::intoLevel() const {
 
     auto isOldFile = handlePlistDataForParsing(value);
 
-    // Decompress sequence triggers from GMD3 format BEFORE parsing
     if (m_type.value_or(DEFAULT_GMD_TYPE) == GmdFileType::Gmd3) {
         decompressSequenceTriggers(value);
     }
@@ -278,23 +187,12 @@ geode::Result<> ExportGmdFile::intoFile(std::filesystem::path const& path) const
     return Ok();
 }
 
-geode::Result<> gmd::exportLevelAsGmd(
-    GJGameLevel* level,
-    std::filesystem::path const& to,
-    GmdFileType type
-) {
-    return ExportGmdFile::from(level).setType(type).intoFile(to);
-}
-
 geode::Result<GJGameLevel*> gmd::importGmdAsLevel(std::filesystem::path const& from) {
     return ImportGmdFile::from(from).inferType().intoLevel();
 }
 
 GmdFileKind gmd::getGmdFileKind(std::filesystem::path const& path) {
     auto ext = extensionWithoutDot(path);
-    if (gmdListTypeFromString(ext.c_str())) {
-        return GmdFileKind::List;
-    }
     if (gmdTypeFromString(ext.c_str())) {
         return GmdFileKind::Level;
     }
@@ -341,8 +239,8 @@ static void decompressSequenceTriggers(std::string& levelData) {
             int64_t group = values[i + 1];
             int64_t activation = values[i + 2];
             
-            if (loops > 1152921504606846976LL) {
-                loops = 1152921504606846976LL;
+            if (loops > 2147483647LL) {
+                loops = 2147483647LL;
             }
             
             for (int64_t j = 0; j < loops; j++) {
