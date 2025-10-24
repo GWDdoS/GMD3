@@ -1,9 +1,5 @@
 #include "shared.hpp"
 #include "gmd3.hpp"
-#include <Geode/utils/file.hpp>
-#include <Geode/binding/MusicDownloadManager.hpp>
-#include <Geode/utils/JsonValidation.hpp>
-#include <Geode/cocos/support/base64.h>
 using namespace geode::prelude;
 using namespace gmd;
 
@@ -61,6 +57,7 @@ geode::Result<std::string> ImportGmdFile::getLevelData() const {
         return Err("No file type set");
     }
     
+    // Only support Gmd3
     return file::readString(m_path).mapErr([this](std::string err) { 
         return fmt::format("Unable to read {}: {}", m_path, err); 
     });
@@ -71,6 +68,7 @@ geode::Result<GJGameLevel*> ImportGmdFile::intoLevel() const {
 
     auto isOldFile = handlePlistDataForParsing(value);
 
+    // Decompress sequence triggers from GMD3 format BEFORE parsing
     if (m_type.value_or(DEFAULT_GMD_TYPE) == GmdFileType::Gmd3) {
         decompressSequenceTriggers(value);
     }
@@ -131,54 +129,8 @@ geode::Result<geode::ByteVector> ExportGmdFile::intoBytes() const {
     if (!m_type) {
         return Err("No file type set");
     }
-    switch (m_type.value()) {
-        case GmdFileType::Gmd: {
-            GEODE_UNWRAP_INTO(auto data, this->getLevelData());
-            return Ok(geode::ByteVector(data.begin(), data.end()));
-        } break;
-
-        case GmdFileType::Lvl: {
-            GEODE_UNWRAP_INTO(auto data, this->getLevelData());
-            unsigned char* zippedData = nullptr;
-            auto count = ZipUtils::ccDeflateMemory(
-                reinterpret_cast<unsigned char*>(data.data()),
-                data.size(),
-                &zippedData
-            );
-            if (!count) {
-                return Err("Unable to compress level data");
-            }
-            auto bytes = geode::ByteVector(
-                reinterpret_cast<uint8_t*>(zippedData), 
-                reinterpret_cast<uint8_t*>(zippedData + count)
-            );
-            if (zippedData) {
-                delete[] zippedData;
-            }
-            return Ok(bytes);
-        } break;
-
-        case GmdFileType::Gmd2: {
-            GEODE_UNWRAP_INTO(auto data, this->getLevelData());
-            GEODE_UNWRAP_INTO(auto zip, file::Zip::create());
-
-            auto json = matjson::Value();
-            if (m_includeSong) {
-                auto path = std::filesystem::path(std::string(m_level->getAudioFileName()));
-                json["song-file"] = path.filename().string();
-                json["song-is-custom"] = m_level->m_songID;
-                GEODE_UNWRAP(zip.addFrom(path));
-            }
-            GEODE_UNWRAP(zip.add("level.meta", json.dump()));
-            GEODE_UNWRAP(zip.add("level.data", data));
-
-            return Ok(zip.getData());
-        } break;
-
-        default: {
-            return Err("Unknown file type");
-        } break;
-    }
+    GEODE_UNWRAP_INTO(auto data, this->getLevelData());
+    return Ok(geode::ByteVector(data.begin(), data.end()));
 }
 
 geode::Result<> ExportGmdFile::intoFile(std::filesystem::path const& path) const {
@@ -239,8 +191,8 @@ static void decompressSequenceTriggers(std::string& levelData) {
             int64_t group = values[i + 1];
             int64_t activation = values[i + 2];
             
-            if (loops > 2147483647LL) {
-                loops = 2147483647LL;
+            if (loops > 1152921504606846976LL) {
+                loops = 1152921504606846976LL;
             }
             
             for (int64_t j = 0; j < loops; j++) {
