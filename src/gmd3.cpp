@@ -84,7 +84,7 @@ geode::Result<GJGameLevel*> ImportGmdFile::intoLevel() const {
 
     level->m_isEditable = true;
     level->m_levelType = GJLevelType::Editor;
-
+/*
 #ifdef GEODE_IS_WINDOWS
     if (isOldFile && level->m_levelDesc.size()) {
         unsigned char* out = nullptr;
@@ -100,7 +100,7 @@ geode::Result<GJGameLevel*> ImportGmdFile::intoLevel() const {
         }
     }
 #endif
-
+*/
     return Ok(level);
 }
 
