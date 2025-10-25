@@ -1,5 +1,6 @@
 #include "gmd3.hpp"
 #include "shared.hpp"
+#include <Geode/cocos/support/base64.h>
 
 using namespace geode::prelude;
 using namespace gmd;
@@ -85,7 +86,7 @@ geode::Result<GJGameLevel*> ImportGmdFile::intoLevel() const {
 
     level->m_isEditable = true;
     level->m_levelType = GJLevelType::Editor;
-/*
+
 #ifdef GEODE_IS_WINDOWS
     if (isOldFile && level->m_levelDesc.size()) {
         unsigned char* out = nullptr;
@@ -101,7 +102,7 @@ geode::Result<GJGameLevel*> ImportGmdFile::intoLevel() const {
         }
     }
 #endif
-*/
+
     return Ok(level);
 }
 
@@ -192,8 +193,8 @@ static void decompressSequenceTriggers(std::string& levelData) {
             int64_t group = values[i + 1];
             int64_t activation = values[i + 2];
             
-            if (loops > 1152921504606846976LL) {
-                loops = 1152921504606846976LL;
+            if (loops > 2147483647LL) {
+                loops = 2147483647LL;
             }
             
             for (int64_t j = 0; j < loops; j++) {
