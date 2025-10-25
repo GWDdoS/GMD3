@@ -1,12 +1,12 @@
 #include "shared.hpp"
-/* no yet implemented for export as GMD3
+
 static void removeNullbytesFromString(std::string& str) {
     for (auto& c : str) {
         if (!c) c = ' ';
     }
 }
 
-auto ::handlePlistDataForParsing(std::string& value) -> bool {
+bool handlePlistDataForParsing(std::string& value) {
     removeNullbytesFromString(value);
 
     // add gjver if it's missing as otherwise DS_Dictionary fails to load the data
@@ -27,4 +27,3 @@ auto ::handlePlistDataForParsing(std::string& value) -> bool {
     }
     return isOldFile;
 }
-*/
