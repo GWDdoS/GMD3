@@ -1,5 +1,6 @@
-#include "shared.hpp"
 #include "gmd3.hpp"
+#include "shared.hpp"
+
 using namespace geode::prelude;
 using namespace gmd;
 
