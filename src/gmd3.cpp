@@ -59,7 +59,6 @@ geode::Result<std::string> ImportGmdFile::getLevelData() const {
         return Err("No file type set");
     }
     
-    // Only support Gmd3
     return file::readString(m_path).mapErr([this](std::string err) { 
         return fmt::format("Unable to read {}: {}", m_path, err); 
     });
