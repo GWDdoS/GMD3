@@ -69,7 +69,6 @@ geode::Result<GJGameLevel*> ImportGmdFile::intoLevel() const {
 
     auto isOldFile = handlePlistDataForParsing(value);
 
-    // Decompress sequence triggers from GMD3 format BEFORE parsing
     if (m_type.value_or(DEFAULT_GMD_TYPE) == GmdFileType::Gmd3) {
         decompressSequenceTriggers(value);
     }
@@ -171,34 +170,82 @@ static void decompressSequenceTriggers(std::string& levelData) {
             customDataStart = pos + 7;
         }
         
-        std::vector<int64_t> values;
+        std::vector<std::string> values;
         std::string current = customData;
         
         size_t dotPos = 0;
         while ((dotPos = current.find(".")) != std::string::npos) {
             std::string value = current.substr(0, dotPos);
-            try {
-                values.push_back(std::stoll(value));
-            } catch(...) {}
+            values.push_back(value);
             current = current.substr(dotPos + 1);
         }
-        try {
-            values.push_back(std::stoll(current));
-        } catch(...) {}
+        values.push_back(current);
         
         std::string decompressed;
-        for (size_t i = 0; i + 2 < values.size(); i += 3) {
-            int64_t loops = values[i];
-            int64_t group = values[i + 1];
-            int64_t activation = values[i + 2];
+        for (size_t i = 0; i + 3 < values.size(); i += 4) {
+            std::string loopsStr = values[i];
+            std::string sectorStr = values[i + 1];
+            std::string groupStr = values[i + 2];
+            std::string activationStr = values[i + 3];
             
-            if (loops > 2147483647LL) {
-                loops = 2147483647LL;
+            bool isInfiniteLoops = (loopsStr == "inf");
+            int64_t loops = 0;
+            
+            if (!isInfiniteLoops) {
+                try {
+                    loops = std::stoll(loopsStr);
+                    if (loops > 2147483647LL) {
+                        loops = 2147483647LL;
+                    }
+                } catch(...) {
+                    continue;
+                }
             }
             
-            for (int64_t j = 0; j < loops; j++) {
-                if (i > 0 || j > 0) decompressed += ".";
-                decompressed += std::to_string(group) + "." + std::to_string(activation);
+            bool isInfiniteSector = (sectorStr == "inf");
+            int64_t sector = 1;
+            
+            if (!isInfiniteSector) {
+                try {
+                    sector = std::stoll(sectorStr);
+                } catch(...) {
+                    continue;
+                }
+            }
+            
+            int64_t group = 0;
+            int64_t activation = 0;
+            
+            try {
+                group = std::stoll(groupStr);
+                activation = std::stoll(activationStr);
+            } catch(...) {
+                continue;
+            }
+            
+            if (isInfiniteLoops || isInfiniteSector) {
+                while (true) {
+                    std::string innerSector;
+                    int64_t expandSector = isInfiniteSector ? 1 : sector;
+                    for (int64_t k = 0; k < expandSector; k++) {
+                        if (k > 0) innerSector += ".";
+                        innerSector += std::to_string(group) + "." + std::to_string(activation);
+                    }
+                    
+                    if (i > 0 || decompressed.size() > 0) decompressed += ".";
+                    decompressed += innerSector;
+                }
+            } else {
+                std::string innerSector;
+                for (int64_t k = 0; k < sector; k++) {
+                    if (k > 0) innerSector += ".";
+                    innerSector += std::to_string(group) + "." + std::to_string(activation);
+                }
+                
+                for (int64_t j = 0; j < loops; j++) {
+                    if (i > 0 || j > 0) decompressed += ".";
+                    decompressed += innerSector;
+                }
             }
         }
         
